@@ -27,12 +27,16 @@ def jukes_cantor(reference_sequence: str, distant_sequence: str) -> float:
     # Count the number of mismatches
     mismatches = 0
     valid_sites = 0
+    VALID = {"A", "G", "C", "T"}
 
-    for base1, base2 in zip(reference_sequence, distant_sequence):
+    ref_seq = reference_sequence.upper()
+    dist_seq = distant_sequence.upper()
+    for base1, base2 in zip(ref_seq, dist_seq):
         # JC correction ignores indels
         if base1 == '-' or base2 == '-':
             continue
-
+        elif base1 not in VALID or base2 not in VALID:
+            continue
         valid_sites += 1
         if base1 != base2:
             mismatches += 1
@@ -40,10 +44,10 @@ def jukes_cantor(reference_sequence: str, distant_sequence: str) -> float:
     if valid_sites == 0:
         return 0.0
 
-    # Calculate the proportion of differing sites (p-distance)
+    # Calculate proportion of differing sites
     p = mismatches / valid_sites
 
-    # Jukes-Cantor is mathematically undefined for p >= 0.75 (saturation)
+    # JC undefined for p >= 0.75
     if p >= 0.75:
         return float('inf')
 
@@ -73,4 +77,33 @@ def kimura_two_parameter(reference_sequence: str, distant_sequence: str) -> floa
         For example 1.196.
 
     """
-    raise NotImplementedError()
+    import math
+    VALID = {"A", "G", "C", "T"}
+    PURINES = {"A", "G"}
+    transitions = 0
+    transversions = 0
+    valid = 0
+
+    ref_seq = reference_sequence.upper()
+    dist_seq = distant_sequence.upper()
+    for a, b in zip(ref_seq, dist_seq):
+        if a not in VALID or b not in VALID:
+            continue
+        valid += 1
+        if a == b:
+            continue
+        if (a in PURINES) == (b in PURINES):
+            # purine to purine / pyrimidine to pyrimidine
+            transitions += 1
+        else:
+            transversions += 1
+    if valid == 0:
+        return 0.0
+    P = transitions / valid
+    Q = transversions / valid
+    arg1 = 1 - 2 * P - Q
+    arg2 = 1 - 2 * Q
+    if arg1 <= 0 or arg2 <= 0:
+        return float("inf")
+    d = -0.5 * math.log(arg1) - 0.25 * math.log(arg2)
+    return d * valid
